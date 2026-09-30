@@ -1,6 +1,14 @@
 {
   "rewrites": [
     {
+      "source": "/analyse",
+      "destination": "https://clinical-rag-llm-evidence-synthesize.onrender.com/analyse"
+    },
+    {
+      "source": "/health",
+      "destination": "https://clinical-rag-llm-evidence-synthesize.onrender.com/health"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
