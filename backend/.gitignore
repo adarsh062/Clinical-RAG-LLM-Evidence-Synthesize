@@ -1,0 +1,26 @@
+# Environment variables & secrets
+.env
+.env.*
+*.env
+!.env.example
+
+# Python virtual environments & bytecode
+venv/
+.venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Large raw PDF files (ChromaDB has all chunk embeddings)
+books/
+*.pdf
+
+# Editor & OS artifacts
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log

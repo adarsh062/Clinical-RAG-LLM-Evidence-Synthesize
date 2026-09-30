@@ -1,0 +1,29 @@
+# Environment variables and API keys
+.env
+.env.*
+*.env
+!.env.example
+backend/.env
+
+# Node dependencies and build
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+
+# Python virtual environments & caches
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+
+# Raw large PDF books (ChromaDB vector DB already has all text chunks)
+books/
+backend/books/
+*.pdf
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
