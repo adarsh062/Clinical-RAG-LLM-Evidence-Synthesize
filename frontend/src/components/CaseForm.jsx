@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { SAMPLE_CASE } from '../utils/parser';
 
-export default function CaseForm({ onAnalyze, isLoading, onNavigateHome }) {
+export default function CaseForm({ onAnalyze, isLoading, serverError, onClearError, onNavigateHome }) {
   const [age, setAge] = useState('');
   const [gender, setGender] = useState('Male');
   const [chiefComplaint, setChiefComplaint] = useState('');
@@ -26,6 +26,7 @@ export default function CaseForm({ onAnalyze, isLoading, onNavigateHome }) {
     setChiefComplaint('');
     setClinicalHistory('');
     setValidationError('');
+    if (onClearError) onClearError();
   };
 
   const handleLoadSample = () => {
@@ -90,6 +91,18 @@ export default function CaseForm({ onAnalyze, isLoading, onNavigateHome }) {
 
         {/* Clinical Form Body Card */}
         <div className="case-entry-card">
+          {serverError && (
+            <div className="clinical-alert-box error" style={{ marginBottom: '20px', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+              <AlertCircle size={20} style={{ flexShrink: 0, marginTop: '2px' }} />
+              <div>
+                <strong>Backend Server Error:</strong> {serverError}
+                <div style={{ fontSize: '0.82rem', marginTop: '4px', opacity: 0.9 }}>
+                  (Please verify that your Render backend is running or wait a moment for the cold start).
+                </div>
+              </div>
+            </div>
+          )}
+
           {validationError && (
             <div className="clinical-alert-box error">
               <AlertCircle size={18} />

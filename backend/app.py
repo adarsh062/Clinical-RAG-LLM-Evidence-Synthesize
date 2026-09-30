@@ -177,14 +177,14 @@ CONFIDENCE REASON:
         }), 500
 
     try:
-        response = client.interactions.create(
-            model="gemini-3.6-flash",
-            input=prompt
+        response = client.models.generate_content(
+            model="gemini-3.5-flash-lite",
+            contents=prompt
         )
 
         print("STEP 5: Gemini response received", flush=True)
         return jsonify({
-            "result": response.output_text
+            "result": response.text
         })
     except Exception as e:
         print("GEMINI ERROR:", str(e), flush=True)
