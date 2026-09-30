@@ -21,7 +21,8 @@ export default function App() {
 
     try {
       // Send request to Flask backend (/analyse)
-      const res = await fetch('/analyse', {
+      const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/$/, '');
+      const res = await fetch(`${backendBaseUrl}/analyse`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
