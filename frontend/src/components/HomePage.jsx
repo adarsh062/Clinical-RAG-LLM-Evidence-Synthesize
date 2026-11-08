@@ -1,22 +1,38 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ArrowRight, 
-  Play, 
   BookOpen, 
   CheckCircle2, 
   Target, 
   Stethoscope, 
   FileText, 
   Activity, 
-  Layers, 
-  Sparkles, 
   ShieldCheck, 
   BrainCircuit, 
-  Database 
+  Database,
+  Baby,
+  X
 } from 'lucide-react';
 import heroDoctorImg from '../assets/hero-doctor.png';
 
-export default function HomePage({ onStartPracticing }) {
+export default function HomePage({ onSelectSectionAndPractice }) {
+  const [showSectionModal, setShowSectionModal] = useState(false);
+
+  useEffect(() => {
+    const handleOpenModal = () => setShowSectionModal(true);
+    window.addEventListener('open-practice-modal', handleOpenModal);
+    return () => window.removeEventListener('open-practice-modal', handleOpenModal);
+  }, []);
+
+  const handleOpenChoice = () => {
+    setShowSectionModal(true);
+  };
+
+  const handleChoose = (sectionKey) => {
+    setShowSectionModal(false);
+    onSelectSectionAndPractice(sectionKey);
+  };
+
   return (
     <div className="landing-screen-container">
       <main className="landing-main-wrapper">
@@ -46,7 +62,7 @@ export default function HomePage({ onStartPracticing }) {
 
               <button 
                 className="hero-cta-pill" 
-                onClick={onStartPracticing}
+                onClick={handleOpenChoice}
                 id="hero-get-started-btn"
               >
                 <span>Start Case Practice</span>
@@ -102,7 +118,7 @@ export default function HomePage({ onStartPracticing }) {
                 <span className="count-number">3,000+</span>
                 <span className="count-sub">Clinical Chunks Indexed</span>
               </div>
-              <button className="testimonial-link-btn" onClick={onStartPracticing}>
+              <button className="testimonial-link-btn" onClick={handleOpenChoice}>
                 <span>View Knowledge Base</span>
                 <div className="testimonial-arrow-circle">
                   <ArrowRight size={11} />
@@ -153,31 +169,26 @@ export default function HomePage({ onStartPracticing }) {
             3. VERIFIED MEDICAL TEXTBOOKS & RAG CORE (Lime Green Pill Banner)
             ================================================================= */}
         <section className="partners-lime-bar" id="partners">
-          {/* Source 1: Hutchinson's */}
           <div className="partner-item">
             <BookOpen size={20} className="partner-svg" />
             <span className="partner-text">Hutchinson's Clinical Methods</span>
           </div>
 
-          {/* Source 2: Bedside Clinics */}
           <div className="partner-item">
             <Stethoscope size={20} className="partner-svg" />
             <span className="partner-text">Bedside Clinics in Medicine</span>
           </div>
 
-          {/* Source 3: PJ Mehta */}
           <div className="partner-item">
             <Activity size={20} className="partner-svg" />
             <span className="partner-text">PJ Mehta Practical Medicine</span>
           </div>
 
-          {/* Stack 1: ChromaDB */}
           <div className="partner-item">
             <Database size={20} className="partner-svg" />
             <span className="partner-text">ChromaDB Vector Store</span>
           </div>
 
-          {/* Stack 2: Gemini */}
           <div className="partner-item">
             <BrainCircuit size={20} className="partner-svg" />
             <span className="partner-text">Gemini 3.6 Flash</span>
@@ -197,7 +208,7 @@ export default function HomePage({ onStartPracticing }) {
 
           <div className="steps-cards-grid">
             {/* Step Card 1 */}
-            <div className="step-card" onClick={onStartPracticing} role="button" tabIndex={0}>
+            <div className="step-card" onClick={handleOpenChoice} role="button" tabIndex={0}>
               <div className="step-icon-wrap">
                 <FileText size={26} className="step-icon" />
               </div>
@@ -208,7 +219,7 @@ export default function HomePage({ onStartPracticing }) {
             </div>
 
             {/* Step Card 2 - FEATURED BLUE HIGHLIGHTED CARD */}
-            <div className="step-card step-card-featured" onClick={onStartPracticing} role="button" tabIndex={0}>
+            <div className="step-card step-card-featured" onClick={handleOpenChoice} role="button" tabIndex={0}>
               <div className="step-icon-wrap featured-icon-wrap">
                 <BookOpen size={26} className="step-icon-featured" />
               </div>
@@ -219,7 +230,7 @@ export default function HomePage({ onStartPracticing }) {
             </div>
 
             {/* Step Card 3 */}
-            <div className="step-card" onClick={onStartPracticing} role="button" tabIndex={0}>
+            <div className="step-card" onClick={handleOpenChoice} role="button" tabIndex={0}>
               <div className="step-icon-wrap">
                 <Target size={26} className="step-icon" />
               </div>
@@ -230,7 +241,7 @@ export default function HomePage({ onStartPracticing }) {
             </div>
 
             {/* Step Card 4 */}
-            <div className="step-card" onClick={onStartPracticing} role="button" tabIndex={0}>
+            <div className="step-card" onClick={handleOpenChoice} role="button" tabIndex={0}>
               <div className="step-icon-wrap">
                 <CheckCircle2 size={26} className="step-icon" />
               </div>
@@ -243,6 +254,61 @@ export default function HomePage({ onStartPracticing }) {
         </section>
       </main>
 
+      {/* =================================================================
+          SIMPLE 2-OPTION SELECTION MODAL
+          ================================================================= */}
+      {showSectionModal && (
+        <div className="simple-choice-backdrop" onClick={() => setShowSectionModal(false)}>
+          <div className="simple-choice-modal" onClick={(e) => e.stopPropagation()}>
+            <button 
+              type="button" 
+              className="simple-modal-close"
+              onClick={() => setShowSectionModal(false)}
+            >
+              <X size={18} />
+            </button>
+
+            <div className="simple-modal-head">
+              <h2>Select Section to Practice</h2>
+              <p>Choose the clinical section you want to evaluate:</p>
+            </div>
+
+            <div className="simple-choice-options">
+              {/* Option 1: Clinical */}
+              <button 
+                type="button"
+                className="simple-choice-btn"
+                onClick={() => handleChoose('clinical')}
+              >
+                <div className="choice-icon clinical">
+                  <Stethoscope size={24} />
+                </div>
+                <div className="choice-text">
+                  <h3>Clinical Medicine</h3>
+                  <span>General & Adult Clinical Cases</span>
+                </div>
+                <ArrowRight size={18} className="choice-arrow" />
+              </button>
+
+              {/* Option 2: Pediatrics */}
+              <button 
+                type="button"
+                className="simple-choice-btn"
+                onClick={() => handleChoose('pediatrics')}
+              >
+                <div className="choice-icon pediatrics">
+                  <Baby size={24} />
+                </div>
+                <div className="choice-text">
+                  <h3>Pediatrics</h3>
+                  <span>Neonatal & Child Health Cases</span>
+                </div>
+                <ArrowRight size={18} className="choice-arrow" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

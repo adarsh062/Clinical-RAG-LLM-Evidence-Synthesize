@@ -71,3 +71,37 @@ This document tracks all architecture decisions, bug fixes, deployment setups, a
 - **Reasoning Pipeline:** Context passed to Google Gemini (`gemini-3.5-flash-lite`) under strict educational prompt constraints.
 - **End-to-End Latency:** **~2.2 seconds** from case submission to final structured clinical diagnosis.
 - **Status:** Production-ready and verified.
+
+
+---
+
+## 4. Multi-Specialty Expansion: Addition of Pediatrics Section (UI & Workflow Phase)
+- **Objective:** Add **Pediatrics** alongside **Clinical Medicine** with a clean, minimal UI flow.
+- **Workflow:**
+  - **Clean Landing Page & Navbar:** The home page and navbar remain simple and uncluttered, preserving the original design.
+  - **Single Click Practice Choice:** Clicking "Start Case Practice" or "Practice Case" opens a simple modal giving 2 clean choices:
+    1. **Clinical Medicine** (General & Adult Clinical Cases)
+    2. **Pediatrics** (Neonatal & Child Health Cases)
+  - **Form Flow:** Clicking either option immediately opens the case form for that section.
+  - **Pediatric Form Features:** Age unit support (Years/Months/Weeks), 1-click Pediatric Sample Case (Croup / Stridor), and a clean switch link.
+  - **Assets:** Generated matching 2D vector illustration `hero-pediatrics.png` ready in `frontend/src/assets/`.
+- **Next Phase:** Ingestion of Pediatric textbooks into ChromaDB once PDFs are provided by user.
+
+
+---
+
+## 5. Pediatric Vector Database Ingestion & Dual-Server Deployment Architecture
+- **Textbooks Processed:**
+  1. *Aruchamy Clinical Pediatrics* (3rd Edition) — 784 pages $\rightarrow$ 1,659 text chunks.
+  2. *Piyush Gupta Clinical Pediatrics* (4th Edition) — 669 pages $\rightarrow$ 1,227 text chunks.
+  3. *Clinical Examination Pediatrics Mohsen* — 65 pages (image/scan PDF without text layer; cleanly skipped).
+  - **Total Pediatric Chunks Indexed:** **2,886 chunks** in `backend/chroma_db_pediatric/chroma.sqlite3`.
+- **Backend Enhancements (`backend/app.py`):**
+  - Added dual SQLite FTS retrieval supporting both `chroma_db` (Clinical) and `chroma_db_pediatric` (Pediatrics) in sub-10ms.
+  - Added pediatric-tailored prompt engineering (child age, milestones, vaccination history, triage).
+  - Added dual endpoints: `/analyse` (supports `specialty: 'pediatrics'`) and `/analyse-pediatric`.
+  - Added multi-database health check at `/health`.
+- **Dual Render Server Deployment Strategy:**
+  - **Server 1 (Clinical):** `https://clinical-rag-llm-evidence-synthesize.onrender.com`
+  - **Server 2 (Pediatrics):** Deploy same repo to new Render Web Service (e.g. `pediatric-rag-backend`).
+  - **Frontend Routing:** Configured `VITE_BACKEND_URL` and `VITE_PEDIATRIC_BACKEND_URL` in `App.jsx` for zero resource contention across Render's free tier (512MB RAM each).

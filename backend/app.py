@@ -24,43 +24,46 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 # Base directory paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# 1. Clinical Medicine Knowledge Base (Hutchinson's, Bedside Clinics, PJ Mehta)
 CHROMA_PATH = os.path.join(BASE_DIR, "chroma_db")
 CHROMA_SQLITE_PATH = os.path.join(CHROMA_PATH, "chroma.sqlite3")
 
-# Initialize ChromaDB vector collection (optional / background)
-collection = None
-try:
-    if os.path.exists(CHROMA_PATH):
-        chroma_client = chromadb.PersistentClient(path=CHROMA_PATH)
-        collection = chroma_client.get_collection(name="medical_books")
-        print(f"SUCCESS: ChromaDB collection 'medical_books' loaded from {CHROMA_PATH}", flush=True)
-    else:
-        print(f"WARNING: ChromaDB directory not found at {CHROMA_PATH}", flush=True)
-except Exception as e:
-    print(f"CHROMA INITIALIZATION WARNING: {e}", flush=True)
+# 2. Pediatrics Knowledge Base (Aruchamy Clinical Pediatrics, Piyush Gupta Pediatrics)
+CHROMA_PED_PATH = os.path.join(BASE_DIR, "chroma_db_pediatric")
+CHROMA_PED_SQLITE_PATH = os.path.join(CHROMA_PED_PATH, "chroma.sqlite3")
 
-def retrieve_textbook_passages(query: str, limit: int = 5):
+def retrieve_textbook_passages(query: str, specialty: str = "clinical", limit: int = 5):
     """
-    Lightning-fast, bulletproof textbook retrieval directly from chroma_db/chroma.sqlite3.
-    Searches 3,000+ chunks from Bedside Clinics, Hutchinson's, and PJ Mehta in under 10ms.
-    Eliminates ONNX runtime downloads and thread deadlocks on low-RAM cloud servers (Render).
+    Lightning-fast, bulletproof textbook retrieval directly from ChromaDB SQLite FTS.
+    - Clinical mode: Searches 3,000+ chunks (Bedside Clinics, Hutchinson's, PJ Mehta)
+    - Pediatrics mode: Searches 2,800+ chunks (Aruchamy Clinical Pediatrics, Piyush Gupta)
+    Zero ONNX downloads, zero RAM pressure, and queries in under 10 milliseconds.
     """
-    if not os.path.exists(CHROMA_SQLITE_PATH):
-        print(f"WARNING: Database not found at {CHROMA_SQLITE_PATH}", flush=True)
-        return []
+    # Select appropriate database based on specialty
+    target_db_path = CHROMA_PED_SQLITE_PATH if specialty == "pediatrics" else CHROMA_SQLITE_PATH
 
-    conn = sqlite3.connect(CHROMA_SQLITE_PATH)
+    # Fallback to general clinical database if pediatric DB not available
+    if not os.path.exists(target_db_path):
+        if os.path.exists(CHROMA_SQLITE_PATH):
+            target_db_path = CHROMA_SQLITE_PATH
+        else:
+            print(f"WARNING: Neither database found ({target_db_path})", flush=True)
+            return []
+
+    conn = sqlite3.connect(target_db_path)
     cur = conn.cursor()
 
-    # Extract clinical keywords
+    # Extract relevant clinical keywords
     raw_words = re.findall(r'[a-zA-Z]{3,}', query.lower())
     stop_words = {
         'the', 'and', 'with', 'for', 'was', 'has', 'had', 'her', 'his', 
         'this', 'that', 'from', 'are', 'year', 'old', 'male', 'female', 
-        'patient', 'presents', 'history', 'clinical', 'complaint', 'years'
+        'patient', 'presents', 'history', 'clinical', 'complaint', 'years',
+        'specialty', 'pediatrics', 'child', 'toddler', 'infant', 'months'
     }
     keywords = [w for w in raw_words if w not in stop_words][:8]
-    match_query = ' OR '.join(keywords) if keywords else 'fever OR cough OR pain'
+    match_query = ' OR '.join(keywords) if keywords else 'fever OR cough OR pain OR respiratory'
 
     matches = []
     try:
@@ -70,7 +73,7 @@ def retrieve_textbook_passages(query: str, limit: int = 5):
         )
         matches = cur.fetchall()
     except Exception as fts_err:
-        print(f"FTS search notice: {fts_err}", flush=True)
+        print(f"FTS search notice ({specialty}): {fts_err}", flush=True)
 
     # Fallback if no specific keywords matched
     if not matches:
@@ -87,7 +90,8 @@ def retrieve_textbook_passages(query: str, limit: int = 5):
             (rowid,)
         )
         b = cur.fetchone()
-        book = b[0] if b else "Medical Textbook"
+        default_book = "Pediatric Textbook" if specialty == "pediatrics" else "Medical Textbook"
+        book = b[0] if b else default_book
         passages.append({
             "book": book,
             "document": doc
@@ -107,45 +111,57 @@ def get_gemini_client():
         print(f"GEMINI CLIENT INIT ERROR: {e}", flush=True)
         return None
 
-# Home page
+# Home page / API status dashboard
 @app.route("/")
 def home():
     return render_template("index.html")
 
-# Health check
+# Health check endpoint
 @app.route("/health")
 def health():
-    sqlite_ok = os.path.exists(CHROMA_SQLITE_PATH)
+    clinical_ok = os.path.exists(CHROMA_SQLITE_PATH)
+    pediatric_ok = os.path.exists(CHROMA_PED_SQLITE_PATH)
     return jsonify({
         "status": "ok",
-        "chromadb_ready": sqlite_ok or (collection is not None),
+        "chromadb_clinical_ready": clinical_ok,
+        "chromadb_pediatric_ready": pediatric_ok,
         "gemini_ready": bool(os.getenv("GEMINI_API_KEY"))
     })
 
-# Clinical analysis
+# Main clinical & pediatric analysis endpoint
 @app.route("/analyse", methods=["POST"])
+@app.route("/analyse-pediatric", methods=["POST"])
 def analyse():
     data = request.get_json(silent=True) or {}
     history = data.get("history", "").strip()
+    specialty_input = data.get("specialty", "").lower().strip()
+
+    # Auto-detect pediatric specialty from URL path, payload, or history text
+    is_pediatric = (
+        request.path == "/analyse-pediatric" or 
+        "pediatric" in specialty_input or 
+        "specialty: pediatrics" in history.lower()
+    )
+    specialty = "pediatrics" if is_pediatric else "clinical"
 
     if not history:
         return jsonify({
             "error": "Please enter the patient's history."
         }), 400
 
-    print("STEP 1: History received", flush=True)
+    print(f"STEP 1: History received (Specialty: {specialty.upper()})", flush=True)
 
     # --------------------------------
     # RETRIEVE TEXTBOOK PASSAGES (FAST & RELIABLE)
     # --------------------------------
-    passages = retrieve_textbook_passages(history, limit=5)
-    print(f"STEP 2: ChromaDB search completed (Retrieved {len(passages)} textbook passages)", flush=True)
+    passages = retrieve_textbook_passages(history, specialty=specialty, limit=5)
+    print(f"STEP 2: ChromaDB search completed (Retrieved {len(passages)} {specialty} textbook passages)", flush=True)
 
     # --------------------------------
     # PREPARE TEXTBOOK CONTEXT
     # --------------------------------
     textbook_context = ""
-    print(f"STEP 3: Preparing context from {len(passages)} textbook passages:", flush=True)
+    print(f"STEP 3: Preparing context from {len(passages)} passages:", flush=True)
     for i, item in enumerate(passages):
         book = item.get("book", "Medical Textbook")
         document = item.get("document", "")
@@ -157,18 +173,23 @@ BOOK: {book}
 {document}
 """
 
-    print("STEP 3: Textbook context prepared and injected into Gemini prompt", flush=True)
+    # --------------------------------
+    # GEMINI PROMPT (TAILORED FOR CLINICAL OR PEDIATRICS)
+    # --------------------------------
+    if is_pediatric:
+        system_role = "You are an expert pediatric clinical reasoning assistant for medical students and pediatric residents."
+        clinical_guidance = "- Consider child age, developmental milestones, vaccination status, and pediatric emergency triage priorities."
+    else:
+        system_role = "You are a clinical reasoning assistant for a medical student."
+        clinical_guidance = "- Consider patient age, chronicity, constitutional symptoms, and bedside physical findings."
 
-    # --------------------------------
-    # GEMINI PROMPT
-    # --------------------------------
     prompt = f"""
-You are a clinical reasoning assistant for a medical student.
+{system_role}
 
-Use the patient's history and the retrieved textbook material to make
+Use the patient's presentation and the retrieved textbook material to make
 a DIRECT clinical prediction.
 
-PATIENT HISTORY:
+PATIENT PRESENTATION:
 
 {history}
 
@@ -187,6 +208,7 @@ IMPORTANT:
 - Do not repeat the entire patient history.
 - Do not invent examination findings.
 - Do not invent investigation results.
+{clinical_guidance}
 - Use the supplied textbooks to support your reasoning.
 - Do not mention the textbooks or source numbers.
 - Do not quote textbook passages.
@@ -219,9 +241,6 @@ CONFIDENCE REASON:
 
     print("STEP 4: Sending request to Gemini", flush=True)
 
-    # --------------------------------
-    # GEMINI INVOCATION
-    # --------------------------------
     client = get_gemini_client()
     if not client:
         return jsonify({
@@ -236,7 +255,8 @@ CONFIDENCE REASON:
 
         print("STEP 5: Gemini response received", flush=True)
         return jsonify({
-            "result": response.text
+            "result": response.text,
+            "specialty": specialty
         })
     except Exception as e:
         print("GEMINI ERROR:", str(e), flush=True)

@@ -7,12 +7,21 @@ import {
   ClipboardList, 
   ArrowRight, 
   CheckCircle2, 
-  FileText
+  FileText 
 } from 'lucide-react';
 
-export default function ClinicalResults({ data, patientData, onBack, onNewCase, onNavigateHome }) {
+export default function ClinicalResults({ 
+  data, 
+  patientData, 
+  onBack, 
+  onNewCase, 
+  onNavigateHome,
+  activeSection = 'clinical'
+}) {
+  const isPediatrics = activeSection === 'pediatrics';
+
   const {
-    mostLikely = "Pulmonary Tuberculosis",
+    mostLikely = "Clinical Diagnostic Assessment",
     why = [],
     differentials = [],
     nextSteps = [],
@@ -38,7 +47,7 @@ export default function ClinicalResults({ data, patientData, onBack, onNewCase, 
             <div className="dashboard-badge-row">
               <div className="clinical-audience-tag">
                 <Target size={13} className="shield-icon" />
-                <span>MOST LIKELY</span>
+                <span>{isPediatrics ? 'PEDIATRICS MOST LIKELY' : 'MOST LIKELY'}</span>
               </div>
               <div className={`confidence-pill ${getConfidenceClass(confidence)}`}>
                 CONFIDENCE: {confidence}
@@ -147,7 +156,7 @@ export default function ClinicalResults({ data, patientData, onBack, onNewCase, 
                 ))}
               </ol>
             ) : (
-              <p className="text-slate-500 text-sm">Bedside clinical examination and posteroanterior radiograph.</p>
+              <p className="text-slate-500 text-sm">Clinical monitoring and prompt evaluation.</p>
             )}
           </div>
         </div>
@@ -159,11 +168,13 @@ export default function ClinicalResults({ data, patientData, onBack, onNewCase, 
           <section className="dashboard-patient-summary">
             <div className="patient-summary-header">
               <FileText size={16} className="text-slate-600" />
-              <h3 className="patient-summary-title">Presented Patient Case</h3>
+              <h3 className="patient-summary-title">
+                Presented Patient Case ({isPediatrics ? 'Pediatrics' : 'Clinical Medicine'})
+              </h3>
             </div>
             <div className="patient-summary-body">
               <span className="patient-meta-item">
-                <strong>Patient:</strong> {patientData.age} yr old {patientData.gender}
+                <strong>Patient:</strong> {patientData.age} {patientData.gender}
               </span>
               {patientData.chiefComplaint && (
                 <span className="patient-meta-item">
@@ -172,7 +183,7 @@ export default function ClinicalResults({ data, patientData, onBack, onNewCase, 
               )}
               {patientData.history && (
                 <p className="patient-history-preview">
-                  <strong>Clinical History:</strong> {patientData.history}
+                  <strong>Clinical Presentation:</strong> {patientData.history}
                 </p>
               )}
             </div>

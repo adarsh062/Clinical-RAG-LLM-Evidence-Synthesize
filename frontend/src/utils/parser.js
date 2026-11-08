@@ -130,6 +130,7 @@ export function parseClinicalReasoning(rawText) {
 
 export const SAMPLE_CASE = {
   age: "56",
+  ageUnit: "Years",
   gender: "Male",
   chiefComplaint: "Productive cough for 2 months with fever and weight loss",
   history: `56-year-old male construction worker.
@@ -146,4 +147,25 @@ Smokes 15 cigarettes per day for 30 years.
 Works around construction dust.
 No previous history of tuberculosis, COPD or asthma.
 No physical examination or investigations are available.`
+};
+
+export const SAMPLE_PEDIATRIC_CASE = {
+  age: "3",
+  ageUnit: "Years",
+  gender: "Male",
+  chiefComplaint: "Barking cough, stridor, and respiratory distress for 2 days",
+  history: `3-year-old male toddler brought by parents to emergency triage.
+Barking, seal-like cough for 2 days, worse at night.
+Inspiratory stridor audible at rest with hoarseness of voice when crying.
+Mild runny nose, low-grade fever (100.6°F), and sore throat for preceding 3 days.
+No history of choking, sudden foreign body aspiration, or drooling.
+Child is fully immunized up to date (including Hib and pneumococcal conjugate vaccine).
+Birth History: Full term normal vaginal delivery, birth weight 3.1 kg, cried immediately at birth.
+No prior episodes of asthma, wheezing, or recurrent chest infections.
+Examination Findings:
+Child conscious, irritable, sitting upright.
+Inspiratory stridor with mild suprasternal and subcostal indrawing.
+Heart rate: 124 bpm, Respiratory rate: 36/min, Temperature: 100.4°F, SpO2: 96% on room air.
+Throat examination: mild erythema, no uvular deviation or pseudomembrane seen.
+Lungs: Bilateral transmitted upper airway sounds, no focal wheeze or crepitations.`
 };

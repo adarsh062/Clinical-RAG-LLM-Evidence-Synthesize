@@ -264,16 +264,16 @@
 
     <div class="grid-stats">
         <div class="stat-card">
-            <div class="stat-label">Vector Database</div>
-            <div class="stat-value">ChromaDB (3 Books)</div>
+            <div class="stat-label">Clinical Vector DB</div>
+            <div class="stat-value">3,000+ Chunks (3 Books)</div>
         </div>
         <div class="stat-card">
-            <div class="stat-label">Reasoning LLM</div>
-            <div class="stat-value">Google Gemini Flash</div>
+            <div class="stat-label">Pediatric Vector DB</div>
+            <div class="stat-value">2,886 Chunks (Pediatrics)</div>
         </div>
         <div class="stat-card">
-            <div class="stat-label">CORS Policy</div>
-            <div class="stat-value">Enabled (*)</div>
+            <div class="stat-label">Reasoning Engine</div>
+            <div class="stat-value">Gemini 3.5 Flash Lite</div>
         </div>
     </div>
 
@@ -284,7 +284,15 @@
             <span class="method-badge method-post">POST</span>
             <span>/analyse</span>
         </div>
-        <span class="endpoint-desc">Accepts { history: "..." } · Returns synthesized clinical prediction</span>
+        <span class="endpoint-desc">Accepts { history: "...", specialty: "clinical"|"pediatrics" }</span>
+    </div>
+
+    <div class="endpoint-row">
+        <div>
+            <span class="method-badge method-post">POST</span>
+            <span>/analyse-pediatric</span>
+        </div>
+        <span class="endpoint-desc">Dedicated pediatric differential synthesis endpoint</span>
     </div>
 
     <div class="endpoint-row">
@@ -292,7 +300,7 @@
             <span class="method-badge method-get">GET</span>
             <span>/health</span>
         </div>
-        <span class="endpoint-desc">Subsystem status check (ChromaDB + Gemini connectivity)</span>
+        <span class="endpoint-desc">Subsystem status check (Clinical + Pediatric ChromaDB + Gemini)</span>
     </div>
 
     <div id="health-output"></div>

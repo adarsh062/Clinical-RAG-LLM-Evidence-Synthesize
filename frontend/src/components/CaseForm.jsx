@@ -5,16 +5,25 @@ import {
   Plus, 
   Sparkles, 
   AlertCircle, 
-  FileText, 
   Stethoscope, 
-  ArrowLeft,
-  BookOpen,
-  User
+  Baby,
+  BookOpen
 } from 'lucide-react';
-import { SAMPLE_CASE } from '../utils/parser';
+import { SAMPLE_CASE, SAMPLE_PEDIATRIC_CASE } from '../utils/parser';
 
-export default function CaseForm({ onAnalyze, isLoading, serverError, onClearError, onNavigateHome }) {
+export default function CaseForm({ 
+  onAnalyze, 
+  isLoading, 
+  serverError, 
+  onClearError, 
+  onNavigateHome,
+  activeSection = 'clinical',
+  onSwitchSection
+}) {
+  const isPediatrics = activeSection === 'pediatrics';
+
   const [age, setAge] = useState('');
+  const [ageUnit, setAgeUnit] = useState(isPediatrics ? 'Months' : 'Years');
   const [gender, setGender] = useState('Male');
   const [chiefComplaint, setChiefComplaint] = useState('');
   const [clinicalHistory, setClinicalHistory] = useState('');
@@ -22,6 +31,7 @@ export default function CaseForm({ onAnalyze, isLoading, serverError, onClearErr
 
   const handleClear = () => {
     setAge('');
+    setAgeUnit(isPediatrics ? 'Months' : 'Years');
     setGender('Male');
     setChiefComplaint('');
     setClinicalHistory('');
@@ -30,10 +40,19 @@ export default function CaseForm({ onAnalyze, isLoading, serverError, onClearErr
   };
 
   const handleLoadSample = () => {
-    setAge(SAMPLE_CASE.age);
-    setGender(SAMPLE_CASE.gender);
-    setChiefComplaint(SAMPLE_CASE.chiefComplaint);
-    setClinicalHistory(SAMPLE_CASE.history);
+    if (isPediatrics) {
+      setAge(SAMPLE_PEDIATRIC_CASE.age);
+      setAgeUnit(SAMPLE_PEDIATRIC_CASE.ageUnit || 'Years');
+      setGender(SAMPLE_PEDIATRIC_CASE.gender);
+      setChiefComplaint(SAMPLE_PEDIATRIC_CASE.chiefComplaint);
+      setClinicalHistory(SAMPLE_PEDIATRIC_CASE.history);
+    } else {
+      setAge(SAMPLE_CASE.age);
+      setAgeUnit('Years');
+      setGender(SAMPLE_CASE.gender);
+      setChiefComplaint(SAMPLE_CASE.chiefComplaint);
+      setClinicalHistory(SAMPLE_CASE.history);
+    }
     setValidationError('');
   };
 
@@ -51,18 +70,20 @@ export default function CaseForm({ onAnalyze, isLoading, serverError, onClearErr
 
     setValidationError('');
     
-    // Format full query text for ChromaDB vector search + Gemini RAG prompt
-    let compiledHistory = '';
+    // Format full query text
+    let compiledHistory = `[Specialty: ${isPediatrics ? 'Pediatrics' : 'Clinical Medicine'}]\n\n`;
     if (age || gender) {
-      compiledHistory += `Patient: ${age ? age + '-year-old' : ''} ${gender}.\n\n`;
+      const formattedAge = age ? `${age} ${ageUnit.toLowerCase()}-old` : '';
+      compiledHistory += `Patient: ${formattedAge} ${gender}.\n\n`;
     }
     if (chiefComplaint) {
       compiledHistory += `Chief Complaint: ${chiefComplaint}\n\n`;
     }
-    compiledHistory += `Clinical History:\n${clinicalHistory}`;
+    compiledHistory += `Clinical Presentation:\n${clinicalHistory}`;
 
     onAnalyze({
-      age: age || 'Unknown',
+      specialty: activeSection,
+      age: age ? `${age} ${ageUnit}` : 'Unspecified',
       gender,
       chiefComplaint: chiefComplaint || 'Unspecified symptoms',
       history: clinicalHistory,
@@ -72,20 +93,52 @@ export default function CaseForm({ onAnalyze, isLoading, serverError, onClearErr
 
   return (
     <div className="case-workspace-wrapper">
-      {/* Main Case Form Card */}
       <main className="workspace-main-container">
-        {/* Top Hero Banner Wrapper in soft gray-blue #e9eff5 (matching Results & Home) */}
+        {/* Top Header Card */}
         <section className="dashboard-hero-card">
           <div className="dashboard-hero-content">
             <div className="dashboard-badge-row">
               <div className="clinical-audience-tag">
-                <BookOpen size={13} className="shield-icon" />
-                <span>Textbook RAG Ingestion Active</span>
+                {isPediatrics ? (
+                  <>
+                    <Baby size={13} className="shield-icon" />
+                    <span>Pediatrics Section</span>
+                  </>
+                ) : (
+                  <>
+                    <BookOpen size={13} className="shield-icon" />
+                    <span>Clinical Medicine Section</span>
+                  </>
+                )}
               </div>
+
+              {/* Quick switch between Clinical and Pediatrics if needed */}
+              <button 
+                type="button"
+                className="section-switch-link"
+                onClick={() => onSwitchSection(isPediatrics ? 'clinical' : 'pediatrics')}
+                title="Switch section"
+              >
+                Switch to {isPediatrics ? 'Clinical Medicine' : 'Pediatrics'}
+              </button>
             </div>
 
-            <h1 className="dashboard-primary-title">Patient Clinical Case Presentation</h1>
+            <h1 className="dashboard-primary-title">
+              {isPediatrics ? 'Pediatric Patient Case Presentation' : 'Patient Clinical Case Presentation'}
+            </h1>
 
+            {/* 1-Click Load Sample Button */}
+            <div style={{ marginTop: '14px' }}>
+              <button 
+                type="button" 
+                className="hero-cta-pill" 
+                style={{ padding: '8px 18px', fontSize: '0.85rem' }}
+                onClick={handleLoadSample}
+              >
+                <Sparkles size={14} />
+                <span>{isPediatrics ? 'Load Sample Pediatric Case' : 'Load Sample TB Case'}</span>
+              </button>
+            </div>
           </div>
         </section>
 
@@ -96,9 +149,6 @@ export default function CaseForm({ onAnalyze, isLoading, serverError, onClearErr
               <AlertCircle size={20} style={{ flexShrink: 0, marginTop: '2px' }} />
               <div>
                 <strong>Backend Server Error:</strong> {serverError}
-                <div style={{ fontSize: '0.82rem', marginTop: '4px', opacity: 0.9 }}>
-                  (Please verify that your Render backend is running or wait a moment for the cold start).
-                </div>
               </div>
             </div>
           )}
@@ -120,17 +170,32 @@ export default function CaseForm({ onAnalyze, isLoading, serverError, onClearErr
 
               <div className="demographics-grid">
                 <div className="form-field-group">
-                  <label htmlFor="patient-age">Age (Years)</label>
-                  <input 
-                    type="number" 
-                    id="patient-age"
-                    placeholder="e.g. 56" 
-                    value={age}
-                    onChange={(e) => setAge(e.target.value)}
-                    min="0"
-                    max="120"
-                    className="clinical-input"
-                  />
+                  <label htmlFor="patient-age">{isPediatrics ? 'Age' : 'Age (Years)'}</label>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <input 
+                      type="number" 
+                      id="patient-age"
+                      placeholder={isPediatrics ? '3' : '56'} 
+                      value={age}
+                      onChange={(e) => setAge(e.target.value)}
+                      min="0"
+                      max={ageUnit === 'Months' ? 36 : 120}
+                      className="clinical-input"
+                      style={{ width: isPediatrics ? '90px' : '100%' }}
+                    />
+                    {isPediatrics && (
+                      <select 
+                        value={ageUnit} 
+                        onChange={(e) => setAgeUnit(e.target.value)}
+                        className="clinical-select"
+                        style={{ width: '100px' }}
+                      >
+                        <option value="Years">Years</option>
+                        <option value="Months">Months</option>
+                        <option value="Weeks">Weeks</option>
+                      </select>
+                    )}
+                  </div>
                 </div>
 
                 <div className="form-field-group">
@@ -152,7 +217,7 @@ export default function CaseForm({ onAnalyze, isLoading, serverError, onClearErr
                   <input 
                     type="text" 
                     id="chief-complaint"
-                    placeholder="e.g. Productive cough for 2 months with evening fever and weight loss" 
+                    placeholder={isPediatrics ? 'e.g. Barking cough and stridor for 2 days' : 'e.g. Productive cough for 2 months with evening fever'} 
                     value={chiefComplaint}
                     onChange={(e) => setChiefComplaint(e.target.value)}
                     className="clinical-input"
@@ -168,7 +233,7 @@ export default function CaseForm({ onAnalyze, isLoading, serverError, onClearErr
                 <div className="section-heading-col">
                   <h3 className="section-heading">Detailed Clinical History & Presentation</h3>
                   <span className="section-hint">
-                    Chronology of symptoms, constitutional signs, past medical illnesses, exposures, and examination clues.
+                    Chronology of symptoms, constitutional signs, past history, exposures, and examination clues.
                   </span>
                 </div>
               </div>
@@ -177,7 +242,11 @@ export default function CaseForm({ onAnalyze, isLoading, serverError, onClearErr
                 <textarea 
                   id="clinical-history-input"
                   rows={9}
-                  placeholder="Enter patient's clinical history (e.g., 56-year-old male construction worker with productive cough for 2 months, evening fever, weight loss, brother treated for TB 1 year ago...)"
+                  placeholder={
+                    isPediatrics
+                      ? "Enter pediatric clinical history (e.g. 3-year-old child with barking cough, stridor, low grade fever, up-to-date immunizations...)"
+                      : "Enter patient's clinical history (e.g. 56-year-old male construction worker with productive cough for 2 months, evening fever, weight loss...)"
+                  }
                   value={clinicalHistory}
                   onChange={(e) => setClinicalHistory(e.target.value)}
                   className="clinical-textarea"
@@ -195,27 +264,55 @@ export default function CaseForm({ onAnalyze, isLoading, serverError, onClearErr
                   >
                     <Plus size={12} /> Symptoms
                   </button>
-                  <button 
-                    type="button" 
-                    className="tag-chip-btn"
-                    onClick={() => handleAppendSection('Past Medical History')}
-                  >
-                    <Plus size={12} /> Past History
-                  </button>
-                  <button 
-                    type="button" 
-                    className="tag-chip-btn"
-                    onClick={() => handleAppendSection('Physical Examination Findings')}
-                  >
-                    <Plus size={12} /> Exam Findings
-                  </button>
-                  <button 
-                    type="button" 
-                    className="tag-chip-btn"
-                    onClick={() => handleAppendSection('Medication & Social History')}
-                  >
-                    <Plus size={12} /> Medications / Social
-                  </button>
+                  {isPediatrics ? (
+                    <>
+                      <button 
+                        type="button" 
+                        className="tag-chip-btn"
+                        onClick={() => handleAppendSection('Birth & Developmental Milestones')}
+                      >
+                        <Plus size={12} /> Milestones
+                      </button>
+                      <button 
+                        type="button" 
+                        className="tag-chip-btn"
+                        onClick={() => handleAppendSection('Immunization & Feeding')}
+                      >
+                        <Plus size={12} /> Immunization
+                      </button>
+                      <button 
+                        type="button" 
+                        className="tag-chip-btn"
+                        onClick={() => handleAppendSection('Pediatric Examination Findings')}
+                      >
+                        <Plus size={12} /> Exam Clues
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button 
+                        type="button" 
+                        className="tag-chip-btn"
+                        onClick={() => handleAppendSection('Past Medical History')}
+                      >
+                        <Plus size={12} /> Past History
+                      </button>
+                      <button 
+                        type="button" 
+                        className="tag-chip-btn"
+                        onClick={() => handleAppendSection('Physical Examination Findings')}
+                      >
+                        <Plus size={12} /> Exam Findings
+                      </button>
+                      <button 
+                        type="button" 
+                        className="tag-chip-btn"
+                        onClick={() => handleAppendSection('Medication & Social History')}
+                      >
+                        <Plus size={12} /> Medications
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -238,7 +335,7 @@ export default function CaseForm({ onAnalyze, isLoading, serverError, onClearErr
                 id="analyze-case-btn"
                 disabled={isLoading}
               >
-                <span>{isLoading ? 'Retrieving Textbook Evidence...' : 'Analyze Case with Textbook RAG'}</span>
+                <span>{isLoading ? 'Analyzing Case...' : 'Analyze Case with Textbook RAG'}</span>
                 <div className="submit-arrow-circle">
                   <ArrowRight size={14} />
                 </div>

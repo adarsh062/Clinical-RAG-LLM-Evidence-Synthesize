@@ -186,3 +186,37 @@ frontend/
    npm run dev
    ```
    *Frontend is accessible at `http://localhost:5174/` or `http://localhost:5173/`.*
+
+
+---
+
+## 9. Multi-Specialty Architecture & Pediatrics Module
+- **Sections Supported:**
+  1. `Clinical Medicine` (Adult / General Inpatient & Outpatient)
+  2. `Pediatrics` (Neonatal, Infant & Child Health)
+- **Workflow & Key Additions:**
+  - `frontend/src/assets/hero-pediatrics.png`: Clean 2D flat vector medical illustration matching `hero-doctor.png`, depicting a friendly pediatrician with stethoscope examining a toddler holding a teddy bear.
+  - `activeSection` state in `App.jsx` (`'clinical'` or `'pediatrics'`).
+  - Home and Navbar remain clean and minimal exactly as before.
+  - Clicking "Practice Case" or "Start Case Practice" displays a simple 2-option modal:
+    1. **Clinical Medicine**
+    2. **Pediatrics**
+  - Clicking either option opens the form for that section directly.
+  - Pediatric form supports age in years/months/weeks and 1-click sample pediatric case (Croup / Stridor).
+    - Case form header toggle with age units (`Years`, `Months`, `Weeks`, `Days`) and pediatric quick-append tags.
+    - Sample case data for both Clinical (Adult TB) and Pediatrics (Toddler Croup/Stridor) in `parser.js`.
+
+
+---
+
+## 10. Pediatric Knowledge Base & Dual-Server Setup
+- **Database Path:** `backend/chroma_db_pediatric/chroma.sqlite3` (~25.8 MB)
+- **Indexed Chunks:** 2,886 chunks
+- **Textbooks:**
+  - *Aruchamy Clinical Pediatrics* (3rd Ed) — 1,659 chunks
+  - *Piyush Gupta Clinical Pediatrics* (4th Ed) — 1,227 chunks
+- **Ingestion Script:** `backend/create_pediatric_chunks.py`
+- **Dual Server Configuration:**
+  - Render Service 1 (Clinical): `VITE_BACKEND_URL`
+  - Render Service 2 (Pediatrics): `VITE_PEDIATRIC_BACKEND_URL`
+  - Zero memory contention on Render free tier (512MB RAM isolated per specialty).

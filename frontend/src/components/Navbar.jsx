@@ -4,9 +4,7 @@ import { Stethoscope, ArrowRight, Home } from 'lucide-react';
 export default function Navbar({ 
   currentView, 
   onNavigateHome, 
-  onNavigateForm, 
-  onNavigateOutput, 
-  hasResults 
+  onStartPractice 
 }) {
   return (
     <header className="fixed-app-nav">
@@ -42,7 +40,7 @@ export default function Navbar({
           {currentView === 'home' && (
             <button 
               className="nav-cta-btn" 
-              onClick={onNavigateForm}
+              onClick={onStartPractice}
               id="nav-practice-btn"
             >
               <span>Practice Case</span>
@@ -62,7 +60,7 @@ export default function Navbar({
           {currentView === 'output' && (
             <button 
               className="nav-cta-btn" 
-              onClick={onNavigateForm}
+              onClick={onStartPractice}
               id="nav-new-case-btn"
             >
               <span>+ New Case</span>
