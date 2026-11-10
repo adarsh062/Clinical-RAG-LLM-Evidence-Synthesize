@@ -7,3 +7,5 @@ pypdf
 fonttools
 langchain-text-splitters
 chromadb
+pymongo
+dnspython

@@ -38,10 +38,18 @@ CHROMA_PED_SQLITE_PATH = os.path.join(CHROMA_PED_PATH, "chroma.sqlite3")
 import time
 import urllib.parse
 
-# 3. Usage Analytics & Practice Stats Database (MongoDB Atlas as primary storage)
-STATS_DB_PATH = os.path.join(BASE_DIR, "stats.db")
+# 3. Usage Analytics & Practice Stats Database (Exclusively MongoDB Atlas)
 ADMIN_PINS = {str(os.getenv("ADMIN_PIN", "7256")).strip(), "7256", "2026"}
-MONGODB_URI = os.getenv("MONGODB_URI", "").strip()
+DEFAULT_MONGODB_URI = "mongodb://medico-admin:Gauri%408890@ac-lu5yjql-shard-00-00.vtrsybr.mongodb.net:27017,ac-lu5yjql-shard-00-01.vtrsybr.mongodb.net:27017,ac-lu5yjql-shard-00-02.vtrsybr.mongodb.net:27017/?ssl=true&replicaSet=atlas-13w257-shard-0&authSource=admin&retryWrites=true&w=majority"
+MONGODB_URI = os.getenv("MONGODB_URI", DEFAULT_MONGODB_URI).strip() or DEFAULT_MONGODB_URI
+
+# Configure reliable public DNS nameservers for rock-solid MongoDB SRV resolution
+try:
+    import dns.resolver
+    dns.resolver.default_resolver = dns.resolver.Resolver(configure=False)
+    dns.resolver.default_resolver.nameservers = ['8.8.8.8', '1.1.1.1', '8.8.4.4']
+except Exception:
+    pass
 
 def sanitize_mongodb_uri(raw_uri: str) -> str:
     """Automatically sanitizes and URL-encodes special characters in MongoDB URI password."""
@@ -65,19 +73,21 @@ mongodb_last_error = ""
 
 def connect_mongodb():
     global mongo_client, practice_logs_col, mongodb_cluster_name, mongodb_ping_ms, mongodb_last_error
-    if not MONGODB_URI:
-        mongodb_last_error = "MONGODB_URI is not set in environment."
-        return
+    uri = MONGODB_URI or DEFAULT_MONGODB_URI
 
     try:
-        sanitized_uri = sanitize_mongodb_uri(MONGODB_URI)
+        sanitized_uri = sanitize_mongodb_uri(uri)
         host_match = re.search(r'@([^@\/?]+)', sanitized_uri)
         if host_match:
-            mongodb_cluster_name = host_match.group(1)
+            raw_host = host_match.group(1)
+            if ',' in raw_host or 'shard' in raw_host:
+                mongodb_cluster_name = 'major2026.vtrsybr.mongodb.net (ReplicaSet Direct)'
+            else:
+                mongodb_cluster_name = raw_host
 
         from pymongo import MongoClient
         t0 = time.time()
-        client = MongoClient(sanitized_uri, serverSelectionTimeoutMS=5000)
+        client = MongoClient(sanitized_uri, serverSelectionTimeoutMS=8000, connectTimeoutMS=8000)
         client.admin.command('ping')
         t1 = time.time()
         mongodb_ping_ms = round((t1 - t0) * 1000, 1)
@@ -89,44 +99,19 @@ def connect_mongodb():
         print(f"[OK] [MONGODB ATLAS CONNECTED] Cluster: {mongodb_cluster_name} | Latency: {mongodb_ping_ms}ms | DB: medico_analytics", flush=True)
     except Exception as mongo_err:
         mongodb_last_error = str(mongo_err)
-        print(f"[WARN] [MONGODB CONNECTION NOTICE]: {mongo_err}. Falling back to SQLite.", flush=True)
+        print(f"[WARN] [MONGODB CONNECTION NOTICE]: {mongo_err}", flush=True)
         mongo_client = None
         practice_logs_col = None
 
 connect_mongodb()
 
-def init_stats_db():
-    try:
-        conn = sqlite3.connect(STATS_DB_PATH)
-        cur = conn.cursor()
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS practice_logs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                specialty TEXT,
-                patient_age TEXT,
-                patient_gender TEXT,
-                chief_complaint TEXT,
-                most_likely TEXT,
-                confidence TEXT,
-                feedback TEXT DEFAULT NULL
-            )
-        """)
-        # Ensure feedback column exists in case table was created earlier
-        try:
-            cur.execute("ALTER TABLE practice_logs ADD COLUMN feedback TEXT DEFAULT NULL")
-        except Exception:
-            pass
-        conn.commit()
-        conn.close()
-    except Exception as e:
-        print(f"Stats DB Init Notice: {e}", flush=True)
-
-init_stats_db()
-
 def log_case_practice(specialty: str, history_text: str, result_text: str):
-    """Silently logs practice case metadata for private admin analytics."""
+    """Silently logs practice case metadata directly into MongoDB Atlas."""
+    global practice_logs_col
     try:
+        if practice_logs_col is None:
+            connect_mongodb()
+
         # Extract demographic hints from history
         age_match = re.search(r'Patient:\s*([^,\n.]+)', history_text, re.IGNORECASE)
         patient_info = age_match.group(1).strip() if age_match else "Unspecified"
@@ -143,37 +128,24 @@ def log_case_practice(specialty: str, history_text: str, result_text: str):
 
         now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # 1. Try MongoDB Atlas if connected
         if practice_logs_col is not None:
-            try:
-                doc = {
-                    "timestamp": now_str,
-                    "specialty": specialty,
-                    "patient_age": patient_info,
-                    "patient_gender": "",
-                    "chief_complaint": chief_complaint,
-                    "most_likely": most_likely,
-                    "confidence": confidence,
-                    "feedback": None
-                }
-                res = practice_logs_col.insert_one(doc)
-                return str(res.inserted_id)
-            except Exception as m_err:
-                print(f"MongoDB logging error ({m_err}). Falling back to SQLite.", flush=True)
-
-        # 2. Local SQLite fallback
-        conn = sqlite3.connect(STATS_DB_PATH)
-        cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO practice_logs (specialty, patient_age, patient_gender, chief_complaint, most_likely, confidence)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (specialty, patient_info, "", chief_complaint, most_likely, confidence))
-        case_id = cur.lastrowid
-        conn.commit()
-        conn.close()
-        return case_id
+            doc = {
+                "timestamp": now_str,
+                "specialty": specialty,
+                "patient_age": patient_info,
+                "patient_gender": "",
+                "chief_complaint": chief_complaint,
+                "most_likely": most_likely,
+                "confidence": confidence,
+                "feedback": None
+            }
+            res = practice_logs_col.insert_one(doc)
+            return str(res.inserted_id)
+        else:
+            print(f"[ERROR] Cannot log case: MongoDB Atlas is disconnected ({mongodb_last_error})", flush=True)
+            return None
     except Exception as log_err:
-        print(f"Stats logging notice: {log_err}", flush=True)
+        print(f"MongoDB logging error: {log_err}", flush=True)
         return None
 
 def retrieve_textbook_passages(query: str, specialty: str = "clinical", limit: int = 5):
@@ -420,6 +392,9 @@ CONFIDENCE REASON:
 def get_mongodb_status():
     global mongo_client, practice_logs_col, mongodb_cluster_name, mongodb_ping_ms, mongodb_last_error
 
+    if practice_logs_col is None:
+        connect_mongodb()
+
     ping_ok = False
     current_ping = mongodb_ping_ms
     doc_count = 0
@@ -436,7 +411,6 @@ def get_mongodb_status():
         except Exception as e:
             mongodb_last_error = str(e)
             ping_ok = False
-            # Attempt reconnect
             connect_mongodb()
 
     if ping_ok and practice_logs_col is not None:
@@ -456,12 +430,13 @@ def get_mongodb_status():
             "connected": False,
             "cluster": mongodb_cluster_name or "Not connected",
             "error": mongodb_last_error or "MongoDB not reachable",
-            "storage": "Local SQLite (Fallback)"
+            "storage": "MongoDB Atlas (Disconnected)"
         }), 200
 
 
 @app.route("/api/feedback", methods=["POST"])
 def submit_feedback():
+    global practice_logs_col
     try:
         data = request.get_json(silent=True) or {}
         case_id = data.get("caseId")
@@ -470,7 +445,9 @@ def submit_feedback():
         if feedback not in ["satisfied", "unsatisfied"]:
             return jsonify({"error": "Invalid feedback. Use 'satisfied' or 'unsatisfied'."}), 400
 
-        # 1. Update in MongoDB Atlas if connected
+        if practice_logs_col is None:
+            connect_mongodb()
+
         if practice_logs_col is not None:
             try:
                 if case_id:
@@ -489,33 +466,28 @@ def submit_feedback():
                     "storage": "MongoDB Atlas"
                 })
             except Exception as m_err:
-                print(f"MongoDB feedback error ({m_err}). Falling back to SQLite.", flush=True)
-
-        # 2. Update in SQLite fallback
-        conn = sqlite3.connect(STATS_DB_PATH)
-        cur = conn.cursor()
-
-        if case_id:
-            cur.execute("UPDATE practice_logs SET feedback = ? WHERE id = ?", (feedback, case_id))
+                print(f"MongoDB feedback error: {m_err}", flush=True)
+                return jsonify({"error": f"MongoDB feedback update failed: {m_err}"}), 500
         else:
-            cur.execute("UPDATE practice_logs SET feedback = ? WHERE id = (SELECT MAX(id) FROM practice_logs)", (feedback,))
-
-        conn.commit()
-        conn.close()
-        return jsonify({"status": "ok", "message": "Feedback recorded in SQLite.", "storage": "Local SQLite"})
+            return jsonify({
+                "error": f"Cannot record feedback: MongoDB Atlas is not connected ({mongodb_last_error})"
+            }), 503
     except Exception as err:
         return jsonify({"error": f"Failed to record feedback: {err}"}), 500
 
 
 @app.route("/api/stats", methods=["GET"])
 def get_stats():
+    global practice_logs_col
     key = str(request.args.get("key") or request.headers.get("x-admin-key") or "").strip()
     if key not in ADMIN_PINS:
         return jsonify({"error": "Unauthorized: Invalid PIN"}), 401
 
+    if practice_logs_col is None:
+        connect_mongodb()
+
     today_str = datetime.now().strftime("%Y-%m-%d")
 
-    # 1. Fetch from MongoDB Atlas if connected
     if practice_logs_col is not None:
         try:
             total_cases = practice_logs_col.count_documents({})
@@ -557,110 +529,65 @@ def get_stats():
                 "recentLogs": recent_logs
             })
         except Exception as m_err:
-            print(f"MongoDB stats fetch error ({m_err}). Falling back to SQLite.", flush=True)
-
-    # 2. Fetch from Local SQLite
-    try:
-        conn = sqlite3.connect(STATS_DB_PATH)
-        cur = conn.cursor()
-
-        cur.execute("SELECT COUNT(*) FROM practice_logs")
-        total_cases = cur.fetchone()[0]
-
-        cur.execute("SELECT COUNT(*) FROM practice_logs WHERE specialty = 'clinical'")
-        clinical_cases = cur.fetchone()[0]
-
-        cur.execute("SELECT COUNT(*) FROM practice_logs WHERE specialty = 'pediatrics'")
-        pediatric_cases = cur.fetchone()[0]
-
-        cur.execute("SELECT COUNT(*) FROM practice_logs WHERE date(timestamp) = date('now')")
-        today_cases = cur.fetchone()[0]
-
-        cur.execute("SELECT COUNT(*) FROM practice_logs WHERE feedback = 'satisfied'")
-        satisfied_count = cur.fetchone()[0]
-
-        cur.execute("SELECT COUNT(*) FROM practice_logs WHERE feedback = 'unsatisfied'")
-        unsatisfied_count = cur.fetchone()[0]
-
-        cur.execute("""
-            SELECT id, timestamp, specialty, patient_age, chief_complaint, most_likely, confidence, feedback
-            FROM practice_logs 
-            ORDER BY id DESC 
-            LIMIT 50
-        """)
-        rows = cur.fetchall()
-        conn.close()
-
-        recent_logs = []
-        for r in rows:
-            recent_logs.append({
-                "id": r[0],
-                "timestamp": r[1],
-                "specialty": r[2],
-                "patient": r[3],
-                "chiefComplaint": r[4],
-                "mostLikely": r[5],
-                "confidence": r[6],
-                "feedback": r[7]
-            })
-
+            return jsonify({
+                "status": "error",
+                "database": "MongoDB Atlas",
+                "storage": "MongoDB Atlas",
+                "mongodb": {
+                    "connected": False,
+                    "cluster": mongodb_cluster_name,
+                    "error": str(m_err)
+                },
+                "error": f"Failed to fetch stats from MongoDB Atlas: {m_err}",
+                "totalCases": 0,
+                "clinicalCases": 0,
+                "pediatricCases": 0,
+                "todayCases": 0,
+                "satisfiedCount": 0,
+                "unsatisfiedCount": 0,
+                "recentLogs": []
+            }), 200
+    else:
         return jsonify({
-            "status": "ok",
-            "database": "SQLite (Local File)",
-            "storage": "SQLite (Local File)",
+            "status": "disconnected",
+            "database": "MongoDB Atlas",
+            "storage": "MongoDB Atlas (Disconnected)",
             "mongodb": {
                 "connected": False,
                 "cluster": mongodb_cluster_name or "Not connected",
-                "error": mongodb_last_error
+                "error": mongodb_last_error or "MongoDB not reachable"
             },
-            "totalCases": total_cases,
-            "clinicalCases": clinical_cases,
-            "pediatricCases": pediatric_cases,
-            "todayCases": today_cases,
-            "satisfiedCount": satisfied_count,
-            "unsatisfiedCount": unsatisfied_count,
-            "recentLogs": recent_logs
-        })
-    except Exception as err:
-        return jsonify({"error": f"Failed to fetch stats: {err}"}), 500
+            "error": f"MongoDB Atlas not connected: {mongodb_last_error}",
+            "totalCases": 0,
+            "clinicalCases": 0,
+            "pediatricCases": 0,
+            "todayCases": 0,
+            "satisfiedCount": 0,
+            "unsatisfiedCount": 0,
+            "recentLogs": []
+        }), 200
 
 
 @app.route("/api/stats/clear", methods=["POST", "DELETE"])
 def clear_stats():
+    global practice_logs_col
     key = str(request.args.get("key") or request.headers.get("x-admin-key") or "").strip()
     if key not in ADMIN_PINS:
         return jsonify({"error": "Unauthorized: Invalid PIN"}), 401
 
-    cleared_dbs = []
+    if practice_logs_col is None:
+        connect_mongodb()
 
-    # Clear MongoDB Atlas if connected
     if practice_logs_col is not None:
         try:
             practice_logs_col.delete_many({})
-            cleared_dbs.append("MongoDB Atlas")
+            return jsonify({"status": "ok", "message": "All practice cases cleared from MongoDB Atlas."})
         except Exception as m_err:
-            print(f"MongoDB clear error: {m_err}", flush=True)
-
-    # Clear SQLite
-    try:
-        conn = sqlite3.connect(STATS_DB_PATH)
-        cur = conn.cursor()
-        cur.execute("DELETE FROM practice_logs")
-        try:
-            cur.execute("DELETE FROM sqlite_sequence WHERE name='practice_logs'")
-        except Exception:
-            pass
-        conn.commit()
-        conn.close()
-        cleared_dbs.append("SQLite")
-        return jsonify({"status": "ok", "message": f"All practice cases cleared from {', '.join(cleared_dbs)}."})
-    except Exception as err:
-        return jsonify({"error": f"Failed to clear cases: {err}"}), 500
+            return jsonify({"error": f"Failed to clear MongoDB Atlas: {m_err}"}), 500
+    else:
+        return jsonify({"error": f"MongoDB Atlas not connected: {mongodb_last_error}"}), 503
 
 
-# --------------------------------
-# START SERVER
-# --------------------------------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)

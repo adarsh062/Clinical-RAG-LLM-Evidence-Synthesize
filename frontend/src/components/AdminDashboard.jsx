@@ -178,9 +178,12 @@ export default function AdminDashboard() {
                   <span>MongoDB Atlas ({stats.mongodb.pingMs}ms)</span>
                 </div>
               ) : (
-                <div className="admin-storage-pill fallback">
+                <div 
+                  className="admin-storage-pill fallback"
+                  title={stats?.error || stats?.mongodb?.error || 'MongoDB Atlas Disconnected'}
+                >
                   <Database size={11} />
-                  <span>{stats?.database || 'Local Database'}</span>
+                  <span>MongoDB Atlas (Disconnected)</span>
                 </div>
               )}
               <div className="admin-header-actions">
