@@ -1032,3 +1032,324 @@
     align-items: flex-start;
   }
 }
+
+
+/* ==========================================================================
+   MOBILE RESPONSIVENESS & EXIT FEEDBACK MODAL (WORKSPACE & RESULTS)
+   ========================================================================== */
+
+/* Word-break and overflow safety for all text in results */
+.dashboard-primary-title,
+.dashboard-primary-rationale,
+.diff-name,
+.diff-rationale,
+.step-text,
+.clue-item,
+.patient-history-preview,
+.patient-meta-item,
+.case-workspace-wrapper,
+.workspace-main-container {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  box-sizing: border-box;
+}
+
+.case-workspace-wrapper {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* Exit Feedback Sheet / Modal */
+.exit-feedback-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeInBackdrop 0.2s ease-out;
+}
+
+@keyframes fadeInBackdrop {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.exit-feedback-sheet {
+  background: #ffffff;
+  border-radius: 28px;
+  max-width: 480px;
+  width: 100%;
+  padding: 28px 24px 22px;
+  box-shadow: 0 20px 45px -10px rgba(15, 23, 42, 0.25);
+  border: 1px solid #e2e8f0;
+  animation: slideUpSheet 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUpSheet {
+  from {
+    transform: translateY(20px) scale(0.97);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.exit-feedback-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.exit-feedback-icon-wrap {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.exit-feedback-titles {
+  flex: 1;
+}
+
+.exit-feedback-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 4px;
+}
+
+.exit-feedback-sub {
+  font-size: 0.84rem;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.exit-feedback-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.exit-feedback-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.exit-feedback-choice {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-radius: 16px;
+  border: 1.5px solid #e2e8f0;
+  background: #f8fafc;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.18s ease;
+  font-family: inherit;
+  width: 100%;
+}
+
+.exit-feedback-choice .choice-text-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.exit-feedback-choice .choice-text-col strong {
+  font-size: 0.95rem;
+  color: #0f172a;
+}
+
+.exit-feedback-choice .choice-text-col span {
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.exit-feedback-choice.satisfied {
+  border-color: #a7f3d0;
+  background: #f0fdf4;
+  color: #047857;
+}
+
+.exit-feedback-choice.unsatisfied {
+  border-color: #fecdd3;
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.exit-feedback-footer {
+  display: flex;
+  justify-content: center;
+  padding-top: 8px;
+}
+
+.exit-feedback-skip-btn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-family: inherit;
+}
+
+/* Media Queries for Mobile Screens (Tablets & Phones <= 768px and <= 480px) */
+@media (max-width: 768px) {
+  .workspace-main-container {
+    padding: 14px 12px 48px;
+  }
+
+  .dashboard-hero-card {
+    padding: 22px 18px;
+    border-radius: 22px;
+    margin-bottom: 18px;
+  }
+
+  .dashboard-primary-title {
+    font-size: clamp(1.45rem, 6vw, 1.9rem);
+    line-height: 1.2;
+    margin-bottom: 12px;
+    letter-spacing: -0.02em;
+  }
+
+  .dashboard-primary-rationale {
+    font-size: 0.88rem;
+    line-height: 1.5;
+    margin-bottom: 20px;
+  }
+
+  .dashboard-hero-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 10px;
+  }
+
+  .dashboard-hero-actions .hero-cta-pill,
+  .dashboard-hero-actions .dashboard-secondary-pill {
+    width: 100%;
+    justify-content: center;
+    padding: 12px 18px;
+    box-sizing: border-box;
+  }
+
+  .dashboard-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  .dashboard-step-card {
+    padding: 20px 16px;
+    border-radius: 20px;
+  }
+
+  .clue-item,
+  .step-list-item {
+    font-size: 0.88rem;
+  }
+
+  .differential-item-box {
+    padding: 12px;
+  }
+
+  .diff-name {
+    font-size: 0.94rem;
+  }
+
+  .dashboard-feedback-card {
+    padding: 16px 14px;
+    border-radius: 20px;
+    margin-top: 16px;
+  }
+
+  .feedback-inner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .feedback-actions {
+    width: 100%;
+    display: flex;
+    gap: 8px;
+  }
+
+  .feedback-btn {
+    flex: 1;
+    justify-content: center;
+    padding: 10px 12px;
+    font-size: 0.82rem;
+  }
+
+  .dashboard-patient-summary {
+    padding: 16px 14px;
+    border-radius: 20px;
+  }
+
+  .patient-summary-body {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .patient-meta-item {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Exit modal as bottom sheet on mobile */
+  .exit-feedback-sheet {
+    max-width: 100%;
+    border-radius: 24px 24px 18px 18px;
+    padding: 22px 18px 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .workspace-main-container {
+    padding: 10px 10px 40px;
+  }
+
+  .dashboard-hero-card {
+    padding: 18px 14px;
+    border-radius: 18px;
+  }
+
+  .dashboard-primary-title {
+    font-size: 1.45rem;
+  }
+
+  .dashboard-badge-row {
+    gap: 8px;
+  }
+
+  .clinical-audience-tag,
+  .confidence-pill {
+    font-size: 0.72rem;
+    padding: 3px 10px;
+  }
+}

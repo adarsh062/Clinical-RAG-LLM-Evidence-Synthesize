@@ -5,6 +5,14 @@
       "destination": "https://clinical-rag-llm-evidence-synthesize.onrender.com/analyse"
     },
     {
+      "source": "/analyse-pediatric",
+      "destination": "https://clinical-rag-llm-evidence-synthesize.onrender.com/analyse-pediatric"
+    },
+    {
+      "source": "/api/stats",
+      "destination": "https://clinical-rag-llm-evidence-synthesize.onrender.com/api/stats"
+    },
+    {
       "source": "/health",
       "destination": "https://clinical-rag-llm-evidence-synthesize.onrender.com/health"
     },

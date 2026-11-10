@@ -1,18 +1,24 @@
 import React from 'react';
 import { Stethoscope, ArrowRight, Home } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 
-export default function Navbar({ 
-  currentView, 
-  onNavigateHome, 
-  onStartPractice 
-}) {
+export default function Navbar({ onStartPractice }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const pathname = location.pathname;
+
+  const isHome = pathname === '/';
+  const isForm = pathname.startsWith('/practice');
+  const isResults = pathname === '/results';
+  const isAdmin = pathname.startsWith('/admin');
+
   return (
     <header className="fixed-app-nav">
       <div className="nav-container">
         {/* Brand */}
         <div 
           className="nav-brand" 
-          onClick={onNavigateHome} 
+          onClick={() => navigate('/')} 
           role="button" 
           tabIndex={0}
           title="Medico Clinical Reasoning"
@@ -27,8 +33,8 @@ export default function Navbar({
         <nav className="nav-links">
           <button 
             type="button"
-            className={`nav-tab-link ${currentView === 'home' ? 'active' : ''}`}
-            onClick={onNavigateHome}
+            className={`nav-tab-link ${isHome ? 'active' : ''}`}
+            onClick={() => navigate('/')}
           >
             <Home size={15} />
             <span>Home</span>
@@ -37,7 +43,7 @@ export default function Navbar({
 
         {/* Right CTA Button */}
         <div className="nav-actions">
-          {currentView === 'home' && (
+          {isHome && (
             <button 
               className="nav-cta-btn" 
               onClick={onStartPractice}
@@ -48,22 +54,31 @@ export default function Navbar({
             </button>
           )}
 
-          {currentView === 'form' && (
+          {isForm && (
             <button 
               className="nav-secondary-btn" 
-              onClick={onNavigateHome}
+              onClick={() => navigate('/')}
             >
               <span>Back to Home</span>
             </button>
           )}
 
-          {currentView === 'output' && (
+          {isResults && (
             <button 
               className="nav-cta-btn" 
               onClick={onStartPractice}
               id="nav-new-case-btn"
             >
               <span>+ New Case</span>
+            </button>
+          )}
+
+          {isAdmin && (
+            <button 
+              className="nav-secondary-btn" 
+              onClick={() => navigate('/')}
+            >
+              <span>Exit Admin</span>
             </button>
           )}
         </div>
