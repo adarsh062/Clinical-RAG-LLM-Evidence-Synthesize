@@ -13,7 +13,7 @@ import {
   Baby,
   X
 } from 'lucide-react';
-import heroDoctorImg from '../assets/hero-doctor.png';
+import heroDoctorGif from '../assets/hero-doctor.gif';
 
 export default function HomePage({ onSelectSectionAndPractice }) {
   const [showSectionModal, setShowSectionModal] = useState(false);
@@ -76,8 +76,8 @@ export default function HomePage({ onSelectSectionAndPractice }) {
             <div className="hero-illustration-pane">
               <div className="illustration-wrapper">
                 <img 
-                  src={heroDoctorImg} 
-                  alt="Doctor with stethoscope taking blood pressure of patient" 
+                  src={heroDoctorGif} 
+                  alt="Doctor and Patient Clinic Checkup Animation" 
                   className="hero-doctor-img"
                 />
               </div>

@@ -335,7 +335,7 @@ export default function CaseForm({
                 id="analyze-case-btn"
                 disabled={isLoading}
               >
-                <span>{isLoading ? 'Analyzing Case...' : 'Analyze Case with Textbook RAG'}</span>
+                <span>{isLoading ? 'Analyzing Case...' : 'Analyze Case'}</span>
                 <div className="submit-arrow-circle">
                   <ArrowRight size={14} />
                 </div>

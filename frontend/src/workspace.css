@@ -87,7 +87,7 @@
 }
 
 .workspace-header-inner {
-  max-width: 1200px;
+  max-width: 1220px;
   margin: 0 auto;
   display: flex;
   align-items: center;
@@ -123,9 +123,10 @@
 
 .workspace-main-container {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1220px;
   margin: 0 auto;
-  padding: 28px 24px 60px;
+  padding: 32px 44px 60px;
+  box-sizing: border-box;
 }
 
 /* ==========================================================================
