@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react';
 import { 
   ArrowLeft, 
   Target, 
@@ -7,10 +7,7 @@ import {
   ClipboardList, 
   ArrowRight, 
   CheckCircle2, 
-  FileText,
-  ThumbsUp,
-  ThumbsDown,
-  X
+  FileText
 } from 'lucide-react';
 
 export default function ClinicalResults({ 
@@ -22,117 +19,6 @@ export default function ClinicalResults({
   activeSection = 'clinical'
 }) {
   const isPediatrics = activeSection === 'pediatrics';
-  const [feedback, setFeedback] = useState(null);
-  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
-  const [feedbackNote, setFeedbackNote] = useState('');
-  
-  // Exit Feedback Interception (when user clicks Back or uses browser/phone back gesture)
-  const [showExitModal, setShowExitModal] = useState(false);
-  const [pendingAction, setPendingAction] = useState(null); // 'back' | 'newCase'
-  const feedbackGivenRef = useRef(false);
-
-  const backendBaseUrl = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/$/, '');
-
-  const sendFeedbackToApi = async (type) => {
-    try {
-      await fetch(`${backendBaseUrl}/api/feedback`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          caseId: data?.caseId,
-          feedback: type
-        })
-      });
-    } catch (err) {
-      console.warn('Feedback submission notice:', err);
-    }
-  };
-
-  const handleFeedback = async (type) => {
-    setFeedback(type);
-    feedbackGivenRef.current = true;
-    setIsSubmittingFeedback(true);
-    setFeedbackNote('');
-
-    try {
-      await sendFeedbackToApi(type);
-      setFeedbackNote(type === 'satisfied' ? 'Thank you! Marked as Satisfied.' : 'Thank you! Marked as Not Satisfied.');
-    } catch (err) {
-      setFeedbackNote('Recorded locally. Thank you!');
-    } finally {
-      setIsSubmittingFeedback(false);
-    }
-  };
-
-  // Intercept Back button
-  const handleTriggerBack = () => {
-    if (!feedbackGivenRef.current) {
-      setPendingAction('back');
-      setShowExitModal(true);
-    } else {
-      onBack();
-    }
-  };
-
-  // Intercept New Case button
-  const handleTriggerNewCase = () => {
-    if (!feedbackGivenRef.current) {
-      setPendingAction('newCase');
-      setShowExitModal(true);
-    } else {
-      onNewCase();
-    }
-  };
-
-  // Browser / mobile phone hardware back navigation interception
-  useEffect(() => {
-    window.history.pushState({ isResult: true }, '');
-
-    const handlePopState = () => {
-      if (!feedbackGivenRef.current) {
-        window.history.pushState({ isResult: true }, '');
-        setPendingAction('back');
-        setShowExitModal(true);
-      } else {
-        onBack();
-      }
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [onBack]);
-
-  const handleExitWithFeedback = async (type) => {
-    setFeedback(type);
-    feedbackGivenRef.current = true;
-    setIsSubmittingFeedback(true);
-
-    try {
-      await sendFeedbackToApi(type);
-    } finally {
-      setIsSubmittingFeedback(false);
-      setShowExitModal(false);
-      if (pendingAction === 'newCase') {
-        onNewCase();
-      } else {
-        onBack();
-      }
-    }
-  };
-
-  const handleSkipAndProceed = () => {
-    feedbackGivenRef.current = true;
-    setShowExitModal(false);
-    if (pendingAction === 'newCase') {
-      onNewCase();
-    } else {
-      onBack();
-    }
-  };
 
   const {
     mostLikely = "Clinical Diagnostic Assessment",
@@ -180,7 +66,7 @@ export default function ClinicalResults({
               <button 
                 type="button" 
                 className="hero-cta-pill"
-                onClick={handleTriggerNewCase}
+                onClick={onNewCase}
                 id="dash-new-case-btn"
               >
                 <span>Analyze New Case</span>
@@ -192,7 +78,7 @@ export default function ClinicalResults({
               <button 
                 type="button" 
                 className="dashboard-secondary-pill"
-                onClick={handleTriggerBack}
+                onClick={onBack}
               >
                 <ArrowLeft size={14} />
                 <span>Edit Case</span>
@@ -276,45 +162,7 @@ export default function ClinicalResults({
         </div>
 
         {/* =================================================================
-            3. INLINE ANALYSIS FEEDBACK (Satisfied / Not Satisfied)
-            ================================================================= */}
-        <section className="dashboard-feedback-card">
-          <div className="feedback-inner">
-            <div className="feedback-text-wrap">
-              <span className="feedback-label">Case Diagnostic Feedback</span>
-              <p className="feedback-sub">Are you satisfied with this reasoning and differential?</p>
-            </div>
-            <div className="feedback-actions">
-              <button 
-                type="button" 
-                className={`feedback-btn satisfied ${feedback === 'satisfied' ? 'active' : ''}`}
-                onClick={() => handleFeedback('satisfied')}
-                disabled={isSubmittingFeedback}
-              >
-                <ThumbsUp size={15} />
-                <span>Satisfied</span>
-              </button>
-              <button 
-                type="button" 
-                className={`feedback-btn unsatisfied ${feedback === 'unsatisfied' ? 'active' : ''}`}
-                onClick={() => handleFeedback('unsatisfied')}
-                disabled={isSubmittingFeedback}
-              >
-                <ThumbsDown size={15} />
-                <span>Not Satisfied</span>
-              </button>
-            </div>
-          </div>
-          {feedbackNote && (
-            <div className="feedback-confirmation">
-              <CheckCircle2 size={14} className="text-emerald-600" />
-              <span>{feedbackNote}</span>
-            </div>
-          )}
-        </section>
-
-        {/* =================================================================
-            4. PATIENT CASE PROFILE SUMMARY
+            3. PATIENT CASE PROFILE SUMMARY
             ================================================================= */}
         {patientData && (
           <section className="dashboard-patient-summary">
@@ -342,71 +190,6 @@ export default function ClinicalResults({
           </section>
         )}
       </main>
-
-      {/* =================================================================
-          5. EXIT FEEDBACK MODAL (Prompted when user goes back without feedback)
-          ================================================================= */}
-      {showExitModal && (
-        <div className="exit-feedback-backdrop" onClick={handleSkipAndProceed}>
-          <div className="exit-feedback-sheet" onClick={(e) => e.stopPropagation()}>
-            <div className="exit-feedback-header">
-              <div className="exit-feedback-icon-wrap">
-                <Target size={20} />
-              </div>
-              <div className="exit-feedback-titles">
-                <h3 className="exit-feedback-title">Diagnostic Quality Check</h3>
-                <p className="exit-feedback-sub">Before you go back, were you satisfied with this case reasoning?</p>
-              </div>
-              <button 
-                type="button" 
-                className="exit-feedback-close" 
-                onClick={handleSkipAndProceed}
-                aria-label="Close"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="exit-feedback-options">
-              <button 
-                type="button" 
-                className="exit-feedback-choice satisfied"
-                onClick={() => handleExitWithFeedback('satisfied')}
-                disabled={isSubmittingFeedback}
-              >
-                <ThumbsUp size={18} />
-                <div className="choice-text-col">
-                  <strong>Satisfied</strong>
-                  <span>Accurate differential & diagnosis</span>
-                </div>
-              </button>
-
-              <button 
-                type="button" 
-                className="exit-feedback-choice unsatisfied"
-                onClick={() => handleExitWithFeedback('unsatisfied')}
-                disabled={isSubmittingFeedback}
-              >
-                <ThumbsDown size={18} />
-                <div className="choice-text-col">
-                  <strong>Not Satisfied</strong>
-                  <span>Needs calibration or missing clues</span>
-                </div>
-              </button>
-            </div>
-
-            <div className="exit-feedback-footer">
-              <button 
-                type="button" 
-                className="exit-feedback-skip-btn"
-                onClick={handleSkipAndProceed}
-              >
-                Skip and Go Back
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

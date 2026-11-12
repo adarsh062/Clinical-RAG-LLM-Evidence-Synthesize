@@ -9,8 +9,7 @@ import {
   Stethoscope, 
   ArrowLeft,
   FileText,
-  ThumbsUp,
-  ThumbsDown,
+  Clock,
   Trash2,
   Database
 } from 'lucide-react';
@@ -152,11 +151,6 @@ export default function AdminDashboard() {
     return true;
   });
 
-  const totalEvaluations = (stats?.satisfiedCount || 0) + (stats?.unsatisfiedCount || 0);
-  const satisfactionRate = totalEvaluations > 0 
-    ? Math.round(((stats?.satisfiedCount || 0) / totalEvaluations) * 100)
-    : null;
-
   return (
     <div className="case-workspace-wrapper admin-dashboard-page">
       <main className="workspace-main-container">
@@ -245,15 +239,11 @@ export default function AdminDashboard() {
 
           <div className="admin-stat-card">
             <div className="admin-stat-top">
-              <span className="admin-stat-label">User Satisfaction</span>
-              <div className="admin-stat-icon feedback"><ThumbsUp size={18} /></div>
+              <span className="admin-stat-label">Today's Tests</span>
+              <div className="admin-stat-icon today"><Clock size={20} /></div>
             </div>
-            <div className="admin-stat-val">
-              {satisfactionRate !== null ? `${satisfactionRate}%` : '—'}
-            </div>
-            <span className="admin-stat-hint">
-              👍 {stats?.satisfiedCount ?? 0} Satisfied &nbsp;·&nbsp; 👎 {stats?.unsatisfiedCount ?? 0} Not Satisfied
-            </span>
+            <div className="admin-stat-val">{stats?.todayCases ?? 0}</div>
+            <span className="admin-stat-hint">Analyzed today</span>
           </div>
         </div>
 
@@ -299,50 +289,72 @@ export default function AdminDashboard() {
               <span>When users analyze cases from Clinical or Pediatrics, they will show here.</span>
             </div>
           ) : (
-            <div className="admin-table-responsive">
-              <table className="admin-logs-table">
-                <thead>
-                  <tr>
-                    <th>Date / Time</th>
-                    <th>Specialty</th>
-                    <th>Chief Complaint & Case Summary</th>
-                    <th>Synthesized Diagnosis</th>
-                    <th>User Feedback</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredLogs.map((log) => (
-                    <tr key={log.id}>
-                      <td className="log-time">{log.timestamp}</td>
-                      <td>
-                        <span className={`log-specialty-pill ${log.specialty}`}>
-                          {log.specialty === 'pediatrics' ? 'Pediatrics' : 'Clinical'}
-                        </span>
-                      </td>
-                      <td className="log-complaint" title={log.chiefComplaint}>
-                        {log.chiefComplaint || 'Unspecified'}
-                      </td>
-                      <td className="log-diagnosis">
-                        <strong>{log.mostLikely}</strong>
-                      </td>
-                      <td>
-                        {log.feedback === 'satisfied' ? (
-                          <span className="feedback-badge-satisfied">
-                            <ThumbsUp size={12} /> Satisfied
-                          </span>
-                        ) : log.feedback === 'unsatisfied' ? (
-                          <span className="feedback-badge-unsatisfied">
-                            <ThumbsDown size={12} /> Not Satisfied
-                          </span>
-                        ) : (
-                          <span className="feedback-badge-pending">—</span>
-                        )}
-                      </td>
+            <>
+              {/* Desktop View Table */}
+              <div className="admin-table-responsive admin-desktop-view">
+                <table className="admin-logs-table">
+                  <thead>
+                    <tr>
+                      <th>Date / Time</th>
+                      <th>Specialty</th>
+                      <th>Chief Complaint & Case Summary</th>
+                      <th>Synthesized Diagnosis</th>
+                      <th>Confidence</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {filteredLogs.map((log) => (
+                      <tr key={log.id}>
+                        <td className="log-time">{log.timestamp}</td>
+                        <td>
+                          <span className={`log-specialty-pill ${log.specialty}`}>
+                            {log.specialty === 'pediatrics' ? 'Pediatrics' : 'Clinical'}
+                          </span>
+                        </td>
+                        <td className="log-complaint" title={log.chiefComplaint}>
+                          {log.chiefComplaint || 'Unspecified'}
+                        </td>
+                        <td className="log-diagnosis">
+                          <strong>{log.mostLikely}</strong>
+                        </td>
+                        <td>
+                          <span className="admin-count-badge">
+                            {log.confidence || 'Moderate'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile View Card List */}
+              <div className="admin-mobile-cards-list admin-mobile-view">
+                {filteredLogs.map((log) => (
+                  <div key={log.id} className="admin-mobile-record-card">
+                    <div className="admin-card-header-row">
+                      <span className={`log-specialty-pill ${log.specialty}`}>
+                        {log.specialty === 'pediatrics' ? 'Pediatrics' : 'Clinical'}
+                      </span>
+                      <span className="log-time">{log.timestamp}</span>
+                    </div>
+
+                    <div className="admin-card-section">
+                      <span className="admin-card-label">Chief Complaint:</span>
+                      <p className="admin-card-complaint-text">{log.chiefComplaint || 'Unspecified'}</p>
+                    </div>
+
+                    <div className="admin-card-diagnosis-box">
+                      <div className="admin-card-diag-top">
+                        <span className="admin-card-label">Diagnosis:</span>
+                        <span className="admin-count-badge">{log.confidence || 'Moderate'}</span>
+                      </div>
+                      <strong className="admin-card-diagnosis-title">{log.mostLikely}</strong>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </main>

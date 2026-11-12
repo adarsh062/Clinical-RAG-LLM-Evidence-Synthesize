@@ -2372,6 +2372,88 @@ html, body {
   max-width: 360px;
 }
 
+/* Visibility toggles for Admin view */
+.admin-mobile-only,
+.admin-mobile-view {
+  display: none;
+}
+
+.admin-desktop-only,
+.admin-desktop-view {
+  display: block;
+}
+
+/* Mobile Practice History Cards */
+.admin-mobile-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-mobile-record-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-card-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed #e2e8f0;
+}
+
+.admin-card-section {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.admin-card-label {
+  font-size: 0.72rem;
+  font-weight: 750;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.admin-card-complaint-text {
+  font-size: 0.86rem;
+  color: #1e293b;
+  margin: 0;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.admin-card-diagnosis-box {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-card-diag-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.admin-card-diagnosis-title {
+  font-size: 0.95rem;
+  font-weight: 750;
+  color: #0f172a;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
 /* ==========================================================================
    FEEDBACK WIDGET ON RESULTS PAGE & ENHANCED ADMIN DASHBOARD
    ========================================================================== */
@@ -2785,12 +2867,70 @@ h1, h2, h3, h4, p, span, li, button, input, textarea {
   .decorative-sparkle {
     display: none;
   }
+
+  /* Admin Dashboard Mobile View */
+  .admin-desktop-view {
+    display: none !important;
+  }
+
+  .admin-mobile-view {
+    display: flex !important;
+  }
+
+  .admin-table-card {
+    padding: 16px 14px;
+    border-radius: 20px;
+  }
+
+  .admin-table-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+  }
+
+  .admin-table-title-group {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .admin-filter-tabs {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .admin-filter-pill {
+    flex: 1;
+    text-align: center;
+    padding: 6px 8px;
+    font-size: 0.74rem;
+  }
+
+  .admin-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .admin-stat-card {
+    padding: 14px 14px;
+    border-radius: 16px;
+  }
+
+  .admin-stat-val {
+    font-size: 1.65rem;
+  }
 }
 
 /* --------------------------------------------------------------------------
    SMALL MOBILE PHONES (<= 480px)
    -------------------------------------------------------------------------- */
 @media (max-width: 480px) {
+  .admin-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
   .landing-main-wrapper {
     padding: 10px 10px 36px;
   }

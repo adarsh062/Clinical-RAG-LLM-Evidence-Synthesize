@@ -243,6 +243,41 @@ def health():
         "gemini_ready": bool(os.getenv("GEMINI_API_KEY"))
     })
 
+def generate_with_gemini(client, prompt: str):
+    """
+    Calls Gemini with automatic model fallback and retry backoff.
+    Protects against transient 503 UNAVAILABLE (high traffic / overloaded) and 429 errors.
+    """
+    models_to_try = [
+        "gemini-3.5-flash-lite",
+        "gemini-3.5-flash",
+        "gemini-3.8-flash"
+    ]
+    last_err = None
+
+    for model_name in models_to_try:
+        for attempt in range(2):
+            try:
+                print(f"[GEMINI] Calling model '{model_name}' (attempt {attempt + 1})...", flush=True)
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt
+                )
+                if response and response.text:
+                    print(f"[OK] [GEMINI SUCCESS] Model '{model_name}' generated response.", flush=True)
+                    return response
+            except Exception as err:
+                last_err = err
+                err_str = str(err)
+                print(f"[WARN] [GEMINI RETRY] Model '{model_name}' attempt {attempt + 1} failed: {err_str[:120]}", flush=True)
+                if any(x in err_str for x in ["503", "UNAVAILABLE", "429", "RESOURCE_EXHAUSTED", "overloaded", "experiencing"]):
+                    time.sleep(1.2 * (attempt + 1))
+                    continue
+                else:
+                    break
+
+    raise last_err or Exception("All Gemini models failed to generate content.")
+
 # Main clinical & pediatric analysis endpoint
 @app.route("/analyse", methods=["POST"])
 @app.route("/analyse-pediatric", methods=["POST"])
@@ -363,10 +398,7 @@ CONFIDENCE REASON:
         }), 500
 
     try:
-        response = client.models.generate_content(
-            model="gemini-3.5-flash-lite",
-            contents=prompt
-        )
+        response = generate_with_gemini(client, prompt)
 
         print("STEP 5: Gemini response received", flush=True)
 
@@ -494,8 +526,6 @@ def get_stats():
             clinical_cases = practice_logs_col.count_documents({"specialty": "clinical"})
             pediatric_cases = practice_logs_col.count_documents({"specialty": "pediatrics"})
             today_cases = practice_logs_col.count_documents({"timestamp": {"$regex": f"^{today_str}"}})
-            satisfied_count = practice_logs_col.count_documents({"feedback": "satisfied"})
-            unsatisfied_count = practice_logs_col.count_documents({"feedback": "unsatisfied"})
 
             recent_docs = list(practice_logs_col.find({}).sort("_id", -1).limit(50))
             recent_logs = []
@@ -507,8 +537,7 @@ def get_stats():
                     "patient": doc.get("patient_age", "Unspecified"),
                     "chiefComplaint": doc.get("chief_complaint", "Unspecified"),
                     "mostLikely": doc.get("most_likely", "Clinical Assessment"),
-                    "confidence": doc.get("confidence", "Moderate"),
-                    "feedback": doc.get("feedback")
+                    "confidence": doc.get("confidence", "Moderate")
                 })
 
             return jsonify({
@@ -524,8 +553,6 @@ def get_stats():
                 "clinicalCases": clinical_cases,
                 "pediatricCases": pediatric_cases,
                 "todayCases": today_cases,
-                "satisfiedCount": satisfied_count,
-                "unsatisfiedCount": unsatisfied_count,
                 "recentLogs": recent_logs
             })
         except Exception as m_err:
@@ -543,8 +570,6 @@ def get_stats():
                 "clinicalCases": 0,
                 "pediatricCases": 0,
                 "todayCases": 0,
-                "satisfiedCount": 0,
-                "unsatisfiedCount": 0,
                 "recentLogs": []
             }), 200
     else:
@@ -562,8 +587,6 @@ def get_stats():
             "clinicalCases": 0,
             "pediatricCases": 0,
             "todayCases": 0,
-            "satisfiedCount": 0,
-            "unsatisfiedCount": 0,
             "recentLogs": []
         }), 200
 
